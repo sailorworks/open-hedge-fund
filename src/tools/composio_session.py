@@ -14,7 +14,8 @@ from typing import Any
 from src.tools.composio_client import get_composio_client
 
 # Default user ID for scoping connected accounts
-_default_user_id = "hedge-fund-agent"
+# This must match the user_id used when connecting the account in Composio
+_default_user_id = os.environ.get("COMPOSIO_USER_ID", "soboardsvantage")
 
 
 def execute_tool(tool_name: str, arguments: dict) -> dict:

@@ -6,9 +6,10 @@ _client = None
 
 # Toolkit versions for Finage and Alpha Vantage
 # Format: YYYYMMDD_NN (use recent stable versions)
+# Get latest versions from: composio.toolkits.list() -> meta.version
 TOOLKIT_VERSIONS = {
-    "finage": "20250101_00",
-    "alpha_vantage": "20250101_00",
+    "finage": "20260105_00",
+    "alpha_vantage": "20260105_00",
 }
 
 def get_composio_client() -> Composio:

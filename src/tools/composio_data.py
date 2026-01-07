@@ -80,7 +80,7 @@ def get_prices(ticker: str, start_date: str, end_date: str, api_key: str = None)
             "ALPHA_VANTAGE_TIME_SERIES_DAILY",
             {
                 "symbol": ticker,
-                "outputsize": "full"  # Get full history
+                "outputsize": "compact"  # Free tier: last 100 data points
             }
         )
         if result.get("successful") and result.get("data"):
@@ -120,8 +120,20 @@ def _transform_finage_prices(data: dict) -> list[Price]:
 def _transform_alpha_vantage_prices(data: dict, start_date: str, end_date: str) -> list[Price]:
     """Transform Alpha Vantage response to Price objects."""
     prices = []
+    
+    # Handle nested response structure from Composio
+    # execute_tool returns: {"successful": True, "data": <composio_response>}
+    # composio_response is: {"data": {"Time Series (Daily)": {...}}, "successful": true}
+    # So 'data' here is the composio_response
+    
+    inner_data = data
+    if "data" in data and isinstance(data["data"], dict):
+        inner_data = data["data"]
+    
     # Alpha Vantage returns time series in "Time Series (Daily)" key
-    time_series = data.get("Time Series (Daily)", {})
+    time_series = inner_data.get("Time Series (Daily)", {})
+    
+    print(f"[COMPOSIO_DATA] Found {len(time_series)} time series entries")
     
     for date_str, values in time_series.items():
         # Filter by date range
@@ -141,6 +153,7 @@ def _transform_alpha_vantage_prices(data: dict, start_date: str, end_date: str) 
     
     # Sort by date
     prices.sort(key=lambda p: p.time)
+    print(f"[COMPOSIO_DATA] Filtered to {len(prices)} prices in date range")
     return prices
 
 
@@ -199,25 +212,34 @@ def get_financial_metrics(
 def _transform_company_overview(data: dict, ticker: str, end_date: str, period: str) -> list[FinancialMetrics]:
     """Transform Alpha Vantage Company Overview to FinancialMetrics."""
     try:
+        # Handle nested response structure from Composio
+        # Response is: {"data": {...company data...}, "successful": true}
+        if "data" in data and isinstance(data["data"], dict) and "Symbol" in data["data"]:
+            inner_data = data["data"]
+        else:
+            inner_data = data
+        
+        print(f"[COMPOSIO_DATA] Company overview keys: {list(inner_data.keys())[:10]}...")
+        
         metrics = FinancialMetrics(
             ticker=ticker,
             report_period=end_date,
             period=period,
-            currency=data.get("Currency", "USD"),
-            market_cap=_safe_float(data.get("MarketCapitalization")),
-            enterprise_value=_safe_float(data.get("EnterpriseValue")),
-            price_to_earnings_ratio=_safe_float(data.get("PERatio")),
-            price_to_book_ratio=_safe_float(data.get("PriceToBookRatio")),
-            price_to_sales_ratio=_safe_float(data.get("PriceToSalesRatioTTM")),
-            enterprise_value_to_ebitda_ratio=_safe_float(data.get("EVToEBITDA")),
-            enterprise_value_to_revenue_ratio=_safe_float(data.get("EVToRevenue")),
+            currency=inner_data.get("Currency", "USD"),
+            market_cap=_safe_float(inner_data.get("MarketCapitalization")),
+            enterprise_value=_safe_float(inner_data.get("EnterpriseValue")),
+            price_to_earnings_ratio=_safe_float(inner_data.get("PERatio")),
+            price_to_book_ratio=_safe_float(inner_data.get("PriceToBookRatio")),
+            price_to_sales_ratio=_safe_float(inner_data.get("PriceToSalesRatioTTM")),
+            enterprise_value_to_ebitda_ratio=_safe_float(inner_data.get("EVToEBITDA")),
+            enterprise_value_to_revenue_ratio=_safe_float(inner_data.get("EVToRevenue")),
             free_cash_flow_yield=None,  # Not directly available
-            peg_ratio=_safe_float(data.get("PEGRatio")),
-            gross_margin=_safe_float(data.get("GrossProfitTTM")),  # Note: This is absolute, not margin
-            operating_margin=_safe_float(data.get("OperatingMarginTTM")),
-            net_margin=_safe_float(data.get("ProfitMargin")),
-            return_on_equity=_safe_float(data.get("ReturnOnEquityTTM")),
-            return_on_assets=_safe_float(data.get("ReturnOnAssetsTTM")),
+            peg_ratio=_safe_float(inner_data.get("PEGRatio")),
+            gross_margin=_safe_float(inner_data.get("GrossProfitTTM")),  # Note: This is absolute, not margin
+            operating_margin=_safe_float(inner_data.get("OperatingMarginTTM")),
+            net_margin=_safe_float(inner_data.get("ProfitMargin")),
+            return_on_equity=_safe_float(inner_data.get("ReturnOnEquityTTM")),
+            return_on_assets=_safe_float(inner_data.get("ReturnOnAssetsTTM")),
             return_on_invested_capital=None,  # Not directly available
             asset_turnover=None,
             inventory_turnover=None,
@@ -232,16 +254,16 @@ def _transform_company_overview(data: dict, ticker: str, end_date: str, period: 
             debt_to_equity=None,
             debt_to_assets=None,
             interest_coverage=None,
-            revenue_growth=_safe_float(data.get("QuarterlyRevenueGrowthYOY")),
-            earnings_growth=_safe_float(data.get("QuarterlyEarningsGrowthYOY")),
+            revenue_growth=_safe_float(inner_data.get("QuarterlyRevenueGrowthYOY")),
+            earnings_growth=_safe_float(inner_data.get("QuarterlyEarningsGrowthYOY")),
             book_value_growth=None,
             earnings_per_share_growth=None,
             free_cash_flow_growth=None,
             operating_income_growth=None,
             ebitda_growth=None,
-            payout_ratio=_safe_float(data.get("PayoutRatio")),
-            earnings_per_share=_safe_float(data.get("EPS")),
-            book_value_per_share=_safe_float(data.get("BookValue")),
+            payout_ratio=_safe_float(inner_data.get("PayoutRatio")),
+            earnings_per_share=_safe_float(inner_data.get("EPS")),
+            book_value_per_share=_safe_float(inner_data.get("BookValue")),
             free_cash_flow_per_share=None,
         )
         return [metrics]
