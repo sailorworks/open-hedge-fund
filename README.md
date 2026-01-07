@@ -1,5 +1,5 @@
 # Open Hedge Fund 
-An AI-powered hedge fund that uses multiple agents to make trading decisions, with Composio integration for multi-source financial data. This is an extension of[AI-Hedge-fund](https://github.com/virattt/ai-hedge-fund)
+An AI-powered hedge fund that uses multiple agents to make trading decisions, with Composio integration for multi-source financial data. This is an extension of [AI-Hedge-fund](https://github.com/virattt/ai-hedge-fund)
 
 
 ## Features
